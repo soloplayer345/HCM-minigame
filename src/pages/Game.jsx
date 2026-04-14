@@ -156,8 +156,8 @@ function Game() {
   return (
     <div className="app-shell">
       <header>
-        <h1>Among Us Lite</h1>
-        <p>Simple social deduction demo with Firebase sync.</p>
+        <h1>Đoàn Kết Hay Chia Rẽ</h1>
+        <p>Trò chơi suy luận về tinh thần đại đoàn kết</p>
       </header>
 
       {view === 'lobby' && <Lobby onCreate={handleCreate} onJoin={handleJoin} error={error} />}
