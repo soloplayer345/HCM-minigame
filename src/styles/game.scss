@@ -2,6 +2,34 @@
   box-sizing: border-box;
 }
 
+:root {
+  --bg: #003049;
+  --surface: rgba(0, 48, 73, 0.95);
+  --surface-border: rgba(252, 191, 73, 0.16);
+  --surface-strong: rgba(247, 127, 0, 0.12);
+  --text: #fcfbf6;
+  --text-muted: #fcbf49;
+  --text-soft: #fbe8a6;
+  --button: #d62828;
+  --button-hover: #f77f00;
+  --input-bg: rgba(252, 191, 73, 0.12);
+  --input-focus: rgba(252, 191, 73, 0.24);
+  --button-shadow: rgba(0, 16, 34, 0.35);
+  --error-bg: rgba(214, 40, 40, 0.16);
+  --hint: #fcbf49;
+  --divider: #fcbf49;
+  --player-bg: rgba(252, 191, 73, 0.08);
+  --vote-bg: rgba(247, 127, 0, 0.95);
+  --vote-disabled-bg: rgba(247, 127, 0, 0.45);
+  --icon-toggle-bg: rgba(252, 191, 73, 0.12);
+  --icon-toggle-border: rgba(252, 191, 73, 0.4);
+  --white-overlay: rgba(255, 255, 255, 0.08);
+  --white-overlay-strong: rgba(255, 255, 255, 0.14);
+  --text-light: #eef2ff;
+  --error-text: #ffd8d8;
+  --status-bg: rgba(247, 127, 0, 0.12);
+}
+
 html,
 body,
 #root {
@@ -12,15 +40,15 @@ body,
 
 body {
   font-family: Inter, system-ui, sans-serif;
-  background: #15162e;
-  color: #f4f7ff;
+  background: var(--bg);
+  color: var(--text);
   overflow-x: hidden;
 }
 
 .app-shell {
   min-height: 100vh;
-  background: radial-gradient(circle at top, #2f3b72 0%, #15162e 60%);
-  color: #f4f7ff;
+  background: radial-gradient(circle at top, var(--bg) 0%, #15162e 55%, #0b1d35 100%);
+  color: var(--text);
   padding: 24px;
 }
 
@@ -37,15 +65,15 @@ h1 {
 
 p {
   margin: 8px 0;
-  color: #c9d0ff;
+  color: var(--text-muted);
 }
 
 .card {
-  background: rgba(13, 18, 43, 0.92);
-  border: none;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
   border-radius: 18px;
   padding: 24px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 24px 80px var(--button-shadow);
   max-width: min(720px, 100%);
   margin: 0 auto;
   overflow: hidden;
@@ -73,13 +101,13 @@ input {
   margin-top: 8px;
   border-radius: 12px;
   border: none;
-  background: rgba(255, 255, 255, 0.05);
-  color: #eef2ff;
+  background: var(--input-bg);
+  color: var(--text);
   outline: none;
 }
 
 input:focus {
-  box-shadow: 0 0 0 2px rgba(84, 102, 255, 0.18);
+  box-shadow: 0 0 0 2px var(--input-focus);
 }
 
 button {
@@ -87,20 +115,20 @@ button {
   border: none;
   border-radius: 12px;
   padding: 12px 18px;
-  color: #fff;
-  background: #5466ff;
+  color: var(--text);
+  background: var(--button);
   transition: transform 0.16s ease, background 0.16s ease;
   min-width: 0;
   outline: none;
 }
 
 button:focus {
-  box-shadow: 0 0 0 3px rgba(84, 102, 255, 0.14);
+  box-shadow: 0 0 0 3px rgba(214, 40, 40, 0.22);
 }
 
 button:hover:not(:disabled) {
   transform: translateY(-1px);
-  background: #6b7bff;
+  background: var(--button-hover);
 }
 
 button:disabled {
@@ -127,13 +155,13 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  color: #eef2ff;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--icon-toggle-bg);
+  color: var(--text);
+  border: 1px solid var(--icon-toggle-border);
 }
 
 .icon-toggle:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(252, 191, 73, 0.2);
   transform: translateY(-1px);
 }
 
@@ -146,7 +174,7 @@ button:disabled {
 
 .divider {
   margin: 20px 0;
-  color: #8f99c5;
+  color: var(--divider);
   text-align: center;
   overflow-wrap: anywhere;
 }
@@ -164,8 +192,8 @@ button:disabled {
 .error-message {
   margin-top: 16px;
   padding: 12px 14px;
-  background: rgba(255, 70, 90, 0.14);
-  color: #ffb3bf;
+  background: var(--error-bg);
+  color: var(--error-text);
   border-radius: 12px;
 }
 
@@ -178,14 +206,14 @@ button:disabled {
 }
 
 .back-button {
-  background: rgba(255, 255, 255, 0.08);
-  color: #eef2ff;
+  background: var(--white-overlay);
+  color: var(--text-light);
   border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 10px 16px;
 }
 
 .back-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--white-overlay-strong);
   transform: translateY(-1px);
 }
 
@@ -203,7 +231,7 @@ button:disabled {
   padding: 12px 14px;
   border-radius: 12px;
   margin-bottom: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--player-bg);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -215,19 +243,19 @@ button:disabled {
 }
 
 .player-meta {
-  color: #b8c1ff;
+  color: var(--text-soft);
   font-size: 0.9rem;
 }
 
 .hint {
   margin-top: 12px;
-  color: #a4b2ff;
+  color: var(--hint);
 }
 
 .status-card,
 .vote-block,
 .result-block {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--status-bg);
   padding: 18px;
   border-radius: 16px;
   margin-bottom: 20px;
@@ -247,11 +275,11 @@ button:disabled {
 }
 
 .vote-button {
-  background: rgba(84, 102, 255, 0.95);
+  background: var(--vote-bg);
 }
 
 .vote-button:disabled {
-  background: rgba(84, 102, 255, 0.4);
+  background: var(--vote-disabled-bg);
 }
 
 .action-block {
