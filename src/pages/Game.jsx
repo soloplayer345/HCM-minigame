@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Lobby from '../components/game/Lobby.jsx';
 import Room from '../components/game/Room.jsx';
 import { createRoom, joinRoom, listenRoom, updateGameState, setPlayerName, deleteRoom, leaveRoom, tamperPlayer, startGame, nextPhase, resetGame } from '../services/gameService.js';
+import { ROLE_SECRETARY, ROLE_MILITIA } from '../services/roles.js';
 
 function generatePlayerId() {
   return `player_${Math.random().toString(36).slice(2, 10)}`;
@@ -110,13 +111,29 @@ function Game() {
     if (!room || !room.players) return;
 
     try {
-      await updateGameState(roomId, {
-        protectedId: targetId,
-        [`players/${playerId}/roleRevealed`]: true
-      });
+      const currentPlayer = room.players[playerId] || {};
+      const updateData = currentPlayer.role === ROLE_MILITIA
+        ? { nightProtectedId: targetId }
+        : { protectedId: targetId, [`players/${playerId}/roleRevealed`]: true };
+
+      await updateGameState(roomId, updateData);
       setError('');
     } catch (err) {
       setError(err.message || 'Không thể bảo vệ người chơi.');
+    }
+  };
+
+  const handleAssassinatePlayer = async (targetId) => {
+    if (!room || !room.players) return;
+
+    try {
+      await updateGameState(roomId, {
+        assassinTargetId: targetId,
+        [`players/${playerId}/assassinationUsed`]: true
+      });
+      setError('');
+    } catch (err) {
+      setError(err.message || 'Không thể ám sát người chơi.');
     }
   };
 
@@ -248,6 +265,7 @@ function Game() {
           onResetGame={handleResetGame}
           onSetName={handleSetName}
           onProtectPlayer={handleProtectPlayer}
+          onAssassinatePlayer={handleAssassinatePlayer}
           onIntelReveal={handleIntelReveal}
           onTamperPlayer={handleTamperPlayer}
           onVote={handleVote}

@@ -1,6 +1,14 @@
 import { ref, set, update, onValue, get, remove } from 'firebase/database';
 import { db } from './firebase.js';
-import { ROLE_CREW, ROLE_IMPOSTOR, ROLE_SPY_BOSS, ROLE_SECRETARY, ROLE_INTELLIGENCE } from './roles.js';
+import {
+  ROLE_CREW,
+  ROLE_IMPOSTOR,
+  ROLE_SPY_BOSS,
+  ROLE_ASSASSIN,
+  ROLE_SECRETARY,
+  ROLE_INTELLIGENCE,
+  ROLE_MILITIA
+} from './roles.js';
 
 function generateRoomId() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -136,16 +144,8 @@ export async function startGame(roomId) {
   }
 
   const bossIndex = Math.floor(Math.random() * playerIds.length);
+  const spyBossId = playerIds[bossIndex];
   const remainingPlayerIds = playerIds.filter((_, index) => index !== bossIndex);
-  const secretaryIndex = Math.floor(Math.random() * remainingPlayerIds.length);
-  const secretaryId = remainingPlayerIds[secretaryIndex];
-  const selectedSpyIds = [playerIds[bossIndex]];
-
-  if (remainingPlayerIds.length > 1) {
-    const spyCandidates = remainingPlayerIds.filter((id) => id !== secretaryId);
-    const secondSpyId = spyCandidates[Math.floor(Math.random() * spyCandidates.length)];
-    selectedSpyIds.push(secondSpyId);
-  }
 
   const updates = {
     status: 'playing',
@@ -153,26 +153,67 @@ export async function startGame(roomId) {
     votes: {},
     eliminated: '',
     protectedId: '',
+    nightProtectedId: '',
+    assassinTargetId: '',
+    nightEliminated: '',
+    nightOutcome: '',
     voteOutcome: ''
   };
 
-  const crewCandidates = playerIds.filter((id) => !selectedSpyIds.includes(id) && id !== secretaryId);
-  const intelligenceId = crewCandidates.length > 0 ? crewCandidates[Math.floor(Math.random() * crewCandidates.length)] : null;
+  const selectedSpyIds = [spyBossId];
+  let assassinId = null;
+  let secretaryId = null;
+  let intelligenceId = null;
+  let militiaId = null;
+  let impostorId = null;
+
+  if (remainingPlayerIds.length > 0) {
+    const index = Math.floor(Math.random() * remainingPlayerIds.length);
+    assassinId = remainingPlayerIds.splice(index, 1)[0];
+    selectedSpyIds.push(assassinId);
+  }
+
+  if (remainingPlayerIds.length > 0) {
+    const index = Math.floor(Math.random() * remainingPlayerIds.length);
+    secretaryId = remainingPlayerIds.splice(index, 1)[0];
+  }
+
+  if (remainingPlayerIds.length > 0) {
+    const index = Math.floor(Math.random() * remainingPlayerIds.length);
+    intelligenceId = remainingPlayerIds.splice(index, 1)[0];
+  }
+
+  if (remainingPlayerIds.length > 0) {
+    const index = Math.floor(Math.random() * remainingPlayerIds.length);
+    militiaId = remainingPlayerIds.splice(index, 1)[0];
+  }
+
+  if (remainingPlayerIds.length > 0) {
+    const index = Math.floor(Math.random() * remainingPlayerIds.length);
+    impostorId = remainingPlayerIds.splice(index, 1)[0];
+    selectedSpyIds.push(impostorId);
+  }
 
   playerIds.forEach((id) => {
-    const isBoss = id === playerIds[bossIndex];
+    const isBoss = id === spyBossId;
+    const isAssassin = id === assassinId;
     const isSecretary = id === secretaryId;
-    const isSpy = selectedSpyIds.includes(id);
     const isIntel = id === intelligenceId;
+    const isMilitia = id === militiaId;
+    const isSpy = selectedSpyIds.includes(id);
 
     updates[`players/${id}/role`] = isBoss
       ? ROLE_SPY_BOSS
+      : isAssassin
+      ? ROLE_ASSASSIN
       : isSpy
       ? ROLE_IMPOSTOR
       : isSecretary
       ? ROLE_SECRETARY
       : isIntel
       ? ROLE_INTELLIGENCE
+      : isMilitia
+      ? ROLE_MILITIA
       : ROLE_CREW;
     updates[`players/${id}/vote`] = '';
     updates[`players/${id}/eliminated`] = false;
@@ -180,6 +221,7 @@ export async function startGame(roomId) {
     updates[`players/${id}/safeFromVote`] = isBoss;
     updates[`players/${id}/intelUsed`] = false;
     updates[`players/${id}/tamperUsed`] = false;
+    updates[`players/${id}/assassinationUsed`] = false;
   });
 
   await update(roomRef, updates);
@@ -201,11 +243,29 @@ export async function nextPhase(roomId, currentStatus) {
       updates.status = 'playing';
       updates.timeOfDay = 'night';
     } else {
+      const assassinTargetId = room.assassinTargetId || '';
+      const nightProtectedId = room.nightProtectedId || '';
+      let nightEliminated = '';
+      let nightOutcome = '';
+
+      if (assassinTargetId) {
+        if (assassinTargetId === nightProtectedId) {
+          nightOutcome = 'protected';
+        } else {
+          nightEliminated = assassinTargetId;
+          updates[`players/${nightEliminated}/eliminated`] = true;
+        }
+      }
+
       updates.status = 'voting';
       updates.timeOfDay = 'day';
       updates.tamperedId = '';
       updates.tamperedBy = '';
       updates.tamperedRole = '';
+      updates.nightProtectedId = '';
+      updates.assassinTargetId = '';
+      updates.nightEliminated = nightEliminated;
+      updates.nightOutcome = nightOutcome;
     }
   } else if (currentStatus === 'voting') {
     const voteCount = {};
@@ -232,15 +292,20 @@ export async function nextPhase(roomId, currentStatus) {
     }
   } else if (currentStatus === 'result') {
     const alivePlayers = Object.values(room.players || {}).filter((player) => !player.eliminated);
-    const hasImpostorAlive = alivePlayers.some((player) => player.role === ROLE_SPY_BOSS || player.role === ROLE_IMPOSTOR);
-    const hasCrewAlive = alivePlayers.some((player) => player.role !== ROLE_SPY_BOSS && player.role !== ROLE_IMPOSTOR);
+    const hasImpostorAlive = alivePlayers.some((player) => player.role === ROLE_SPY_BOSS || player.role === ROLE_IMPOSTOR || player.role === ROLE_ASSASSIN);
+    const hasCrewAlive = alivePlayers.some((player) => player.role !== ROLE_SPY_BOSS && player.role !== ROLE_IMPOSTOR && player.role !== ROLE_ASSASSIN);
     updates.status = hasImpostorAlive && hasCrewAlive ? 'playing' : 'end';
     updates.timeOfDay = 'day';
     updates.voteOutcome = '';
     updates.protectedId = '';
+    updates.nightProtectedId = '';
+    updates.assassinTargetId = '';
+    updates.nightOutcome = '';
+    updates.nightEliminated = '';
     if (hasImpostorAlive && hasCrewAlive) {
       Object.keys(room.players || {}).forEach((id) => {
         updates[`players/${id}/tamperUsed`] = false;
+        updates[`players/${id}/assassinationUsed`] = false;
       });
     }
   } else {
@@ -259,7 +324,21 @@ export async function resetGame(roomId) {
   }
 
   const room = snapshot.val();
-  const updates = { status: 'waiting', timeOfDay: 'day', votes: {}, eliminated: '', protectedId: '', voteOutcome: '', tamperedId: '', tamperedBy: '', tamperedRole: '' };
+  const updates = {
+    status: 'waiting',
+    timeOfDay: 'day',
+    votes: {},
+    eliminated: '',
+    protectedId: '',
+    nightProtectedId: '',
+    assassinTargetId: '',
+    nightEliminated: '',
+    nightOutcome: '',
+    voteOutcome: '',
+    tamperedId: '',
+    tamperedBy: '',
+    tamperedRole: ''
+  };
 
   Object.keys(room.players || {}).forEach((id) => {
     updates[`players/${id}/role`] = '';
@@ -269,6 +348,7 @@ export async function resetGame(roomId) {
     updates[`players/${id}/safeFromVote`] = false;
     updates[`players/${id}/intelUsed`] = false;
     updates[`players/${id}/tamperUsed`] = false;
+    updates[`players/${id}/assassinationUsed`] = false;
   });
 
   await update(roomRef, updates);

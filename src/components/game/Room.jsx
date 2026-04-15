@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import PlayerList from './PlayerList.jsx';
-import { getResultMessage, isEnemyRole, ROLE_SECRETARY, ROLE_INTELLIGENCE, ROLE_IMPOSTOR } from '../../services/roles.js';
+import {
+  getResultMessage,
+  isEnemyRole,
+  ROLE_SECRETARY,
+  ROLE_INTELLIGENCE,
+  ROLE_IMPOSTOR,
+  ROLE_ASSASSIN,
+  ROLE_MILITIA
+} from '../../services/roles.js';
 
-function Room({ roomId, room, playerId, username, status, onStartGame, onNextPhase, onResetGame, onSetName, onProtectPlayer, onIntelReveal, onVote, onBack, error }) {
+function Room({ roomId, room, playerId, username, status, onStartGame, onNextPhase, onResetGame, onSetName, onProtectPlayer, onAssassinatePlayer, onIntelReveal, onVote, onBack, error }) {
   const [showRole, setShowRole] = useState(false);
   const [pendingName, setPendingName] = useState('');
   const [intelTargetId, setIntelTargetId] = useState('');
@@ -13,8 +21,11 @@ function Room({ roomId, room, playerId, username, status, onStartGame, onNextPha
   const everyoneVoted = Object.keys(room?.votes || {}).length >= Object.keys(players).length;
   const isHost = playerId === room?.hostId;
   const protectedTarget = room?.protectedId ? players[room.protectedId] : null;
+  const nightProtectedTarget = room?.nightProtectedId ? players[room.nightProtectedId] : null;
   const isDay = room?.timeOfDay !== 'night';
   const canProtect = currentPlayer.role === ROLE_SECRETARY && status === 'playing' && !room?.protectedId && isDay;
+  const canNightProtect = currentPlayer.role === ROLE_MILITIA && status === 'playing' && !room?.nightProtectedId && !isDay;
+  const canAssassinate = currentPlayer.role === ROLE_ASSASSIN && status === 'playing' && !isDay && !currentPlayer.assassinationUsed;
   const canIntel = currentPlayer.role === ROLE_INTELLIGENCE && status === 'playing' && !isDay && !currentPlayer.intelUsed;
   const canTamper = isEnemyRole(currentPlayer.role) && status === 'playing' && !isDay && !currentPlayer.tamperUsed;
   const sameTeam = showRole && isEnemyRole(currentPlayer.role)
@@ -98,6 +109,40 @@ function Room({ roomId, room, playerId, username, status, onStartGame, onNextPha
           </div>
         )}
 
+        {canNightProtect && (
+          <div className="action-block">
+            <div className="status-card">
+              <p><strong>Dân quân</strong> có thể bảo vệ 1 người khỏi bị ám sát mỗi đêm.</p>
+              <div className="player-grid">
+                {Object.entries(players)
+                  .filter(([id, player]) => id !== playerId && !player.eliminated)
+                  .map(([id, player]) => (
+                    <button key={id} className="vote-button" onClick={() => onProtectPlayer(id)}>
+                      {player.name || 'Người chơi'}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {canAssassinate && (
+          <div className="action-block">
+            <div className="status-card">
+              <p><strong>Sát thủ</strong> có thể ám sát 1 người dân mỗi đêm.</p>
+              <div className="player-grid">
+                {Object.entries(players)
+                  .filter(([id, player]) => id !== playerId && !player.eliminated)
+                  .map(([id, player]) => (
+                    <button key={id} className="vote-button" onClick={() => onAssassinatePlayer(id)}>
+                      {player.name || 'Người chơi'}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {canTamper && (
           <div className="action-block">
             <div className="status-card">
@@ -159,7 +204,13 @@ function Room({ roomId, room, playerId, username, status, onStartGame, onNextPha
 
         {protectedTarget && currentPlayer.role === ROLE_SECRETARY && (
           <div className="status-card">
-            <p>Đã bảo vệ: <strong>{protectedTarget.name || 'Người chơi'}</strong></p>
+            <p>Đã bảo vệ phiếu loại: <strong>{protectedTarget.name || 'Người chơi'}</strong></p>
+          </div>
+        )}
+
+        {nightProtectedTarget && currentPlayer.role === ROLE_MILITIA && (
+          <div className="status-card">
+            <p>Đã bảo vệ khỏi ám sát: <strong>{nightProtectedTarget.name || 'Người chơi'}</strong></p>
           </div>
         )}
 
@@ -196,7 +247,7 @@ function Room({ roomId, room, playerId, username, status, onStartGame, onNextPha
             <p className="hint">
               {isDay
                 ? 'Ngày: dân làng thảo luận và chuẩn bị bỏ phiếu.'
-                : 'Đêm: hành động đêm diễn ra, chỉ tình báo có thể khám phá.'}
+                : 'Đêm: dân quân bảo vệ trước, sát thủ ám sát sau, gián điệp nhiễu tình báo và tình báo khám phá.'}
             </p>
           </div>
         )}
