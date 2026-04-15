@@ -1,17 +1,31 @@
-function PlayerList({ players, selfId, status, currentPlayer }) {
+import { getRoleLabel } from '../../services/roles.js';
+
+function PlayerList({ players, selfId, status, currentPlayer, showRole, isHost, hostId }) {
+  const visiblePlayerEntries = Object.entries(players).filter(([id]) => id !== hostId);
+  const nameCounts = visiblePlayerEntries.reduce((acc, [, player]) => {
+    const name = player.name || 'Người chơi';
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div className="player-list">
-      <h3>Players</h3>
+      <h3>Người chơi</h3>
       <ul>
-        {Object.entries(players).map(([id, player]) => {
+        {visiblePlayerEntries.map(([id, player]) => {
           const isSelf = id === selfId;
-          const hiddenRole = status === 'playing' && !isSelf;
-          const roleLabel = hiddenRole ? 'Unknown' : player.role || 'Crewmate';
-          const eliminatedLabel = player.eliminated ? ' - Eliminated' : '';
+          const forceShowRole = player.roleRevealed;
+          const hiddenRole = status === 'playing' && !isSelf && !forceShowRole;
+          const shouldHideSelf = status === 'playing' && isSelf && !showRole;
+          const roleLabel = shouldHideSelf ? '******' : hiddenRole ? 'Không rõ' : getRoleLabel(player.role);
+          const rawName = player.name || 'Người chơi';
+          const duplicateName = nameCounts[rawName] > 1;
+          const displayName = duplicateName ? `${rawName} (${id.slice(-4)})` : rawName;
+          const eliminatedLabel = player.eliminated ? ' - Bị loại' : '';
 
           return (
             <li key={id} className={player.eliminated ? 'eliminated' : ''}>
-              <span>{player.name}</span>
+              <span>{displayName}</span>
               <span className="player-meta">
                 {isSelf ? '(You)' : ''} {status === 'playing' ? `• ${roleLabel}` : ''}
                 {eliminatedLabel}
@@ -20,9 +34,6 @@ function PlayerList({ players, selfId, status, currentPlayer }) {
           );
         })}
       </ul>
-      {status === 'playing' && currentPlayer.role && (
-        <div className="hint">You are playing as <strong>{currentPlayer.role}</strong>.</div>
-      )}
     </div>
   );
 }
