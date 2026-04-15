@@ -120,6 +120,30 @@ button:disabled {
   min-width: 0;
 }
 
+.icon-toggle {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: #eef2ff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.icon-toggle:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.icon-toggle svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+}
+
 .divider {
   margin: 20px 0;
   color: #8f99c5;
@@ -207,6 +231,13 @@ button:disabled {
   padding: 18px;
   border-radius: 16px;
   margin-bottom: 20px;
+}
+
+.status-card.role-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .vote-block .player-grid {

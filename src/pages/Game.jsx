@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Lobby from '../components/game/Lobby.jsx';
 import Room from '../components/game/Room.jsx';
-import { createRoom, joinRoom, listenRoom, updateGameState } from '../services/gameService.js';
+import { createRoom, joinRoom, listenRoom, updateGameState, setPlayerName, startGame, nextPhase, resetGame } from '../services/gameService.js';
 
 function generatePlayerId() {
   return `player_${Math.random().toString(36).slice(2, 10)}`;
@@ -24,9 +24,7 @@ function Game() {
 
     const unsubscribe = listenRoom(roomId, (data) => {
       if (!data) {
-        setError('Room not found.');
-        setRoom(null);
-        return;
+        setError('Không tìm thấy phòng.');
       }
 
       setRoom(data);
@@ -43,12 +41,12 @@ function Game() {
     const newPlayerId = generatePlayerId();
     try {
       const result = await createRoom(name, newPlayerId);
-      setUsername(name);
+      setUsername(name?.trim() || '');
       setPlayerId(newPlayerId);
       setRoomId(result.roomId);
       setView('room');
     } catch (err) {
-      setError(err.message || 'Unable to create room.');
+      setError(err.message || 'Không thể tạo phòng.');
     }
   };
 
@@ -57,50 +55,49 @@ function Game() {
     const newPlayerId = generatePlayerId();
     try {
       await joinRoom(id, name, newPlayerId);
-      setUsername(name);
+      setUsername(name?.trim() || '');
       setPlayerId(newPlayerId);
       setRoomId(id);
       setView('room');
     } catch (err) {
-      setError(err.message || 'Unable to join room.');
+      setError(err.message || 'Không thể tham gia phòng.');
+    }
+  };
+
+  const handleSetName = async (name) => {
+    setError('');
+    try {
+      await setPlayerName(roomId, playerId, name);
+      setUsername(name);
+    } catch (err) {
+      setError(err.message || 'Không thể lưu tên người chơi.');
     }
   };
 
   const handleStartGame = async () => {
-    if (!room || !room.players) {
-      setError('Room is empty.');
-      return;
-    }
-
-    const playerKeys = Object.keys(room.players);
-    if (playerKeys.length < 2) {
-      setError('Need at least 2 players to start.');
-      return;
-    }
-
-    const impostorIndex = Math.floor(Math.random() * playerKeys.length);
-    const updates = { status: 'playing', votes: {} };
-
-    playerKeys.forEach((id, index) => {
-      updates[`players/${id}/role`] = index === impostorIndex ? 'impostor' : 'crewmate';
-      updates[`players/${id}/vote`] = '';
-      updates[`players/${id}/eliminated`] = false;
-    });
-
     try {
-      await updateGameState(roomId, updates);
+      await startGame(roomId);
       setError('');
     } catch (err) {
-      setError(err.message || 'Unable to start game.');
+      setError(err.message || 'Không thể bắt đầu trò chơi.');
     }
   };
 
-  const handleBeginVoting = async () => {
+  const handleNextPhase = async (currentStatus) => {
     try {
-      await updateGameState(roomId, { status: 'voting', votes: {} });
+      await nextPhase(roomId, currentStatus);
       setError('');
     } catch (err) {
-      setError(err.message || 'Unable to begin voting.');
+      setError(err.message || 'Không thể chuyển giai đoạn.');
+    }
+  };
+
+  const handleResetGame = async () => {
+    try {
+      await resetGame(roomId);
+      setError('');
+    } catch (err) {
+      setError(err.message || 'Không thể đặt lại trò chơi.');
     }
   };
 
@@ -141,7 +138,7 @@ function Game() {
 
       setError('');
     } catch (err) {
-      setError(err.message || 'Unable to submit vote.');
+      setError(err.message || 'Không thể nộp phiếu.');
     }
   };
 
@@ -170,7 +167,9 @@ function Game() {
           username={username}
           status={status}
           onStartGame={handleStartGame}
-          onBeginVoting={handleBeginVoting}
+          onNextPhase={handleNextPhase}
+          onResetGame={handleResetGame}
+          onSetName={handleSetName}
           onVote={handleVote}
           onBack={handleBackToLobby}
           error={error}

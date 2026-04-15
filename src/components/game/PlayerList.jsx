@@ -1,17 +1,23 @@
-function PlayerList({ players, selfId, status, currentPlayer }) {
+import { getRoleLabel } from '../../services/roles.js';
+
+function PlayerList({ players, selfId, status, currentPlayer, showRole, isHost, hostId }) {
+  const visiblePlayerEntries = Object.entries(players).filter(([id]) => id !== hostId);
+
   return (
     <div className="player-list">
-      <h3>Players</h3>
+      <h3>Người chơi</h3>
       <ul>
-        {Object.entries(players).map(([id, player]) => {
+        {visiblePlayerEntries.map(([id, player]) => {
           const isSelf = id === selfId;
           const hiddenRole = status === 'playing' && !isSelf;
-          const roleLabel = hiddenRole ? 'Unknown' : player.role || 'Crewmate';
-          const eliminatedLabel = player.eliminated ? ' - Eliminated' : '';
+          const shouldHideSelf = status === 'playing' && isSelf && !showRole;
+          const roleLabel = shouldHideSelf ? '******' : hiddenRole ? 'Không rõ' : getRoleLabel(player.role);
+          const displayName = player.name || 'Người chơi';
+          const eliminatedLabel = player.eliminated ? ' - Bị loại' : '';
 
           return (
             <li key={id} className={player.eliminated ? 'eliminated' : ''}>
-              <span>{player.name}</span>
+              <span>{displayName}</span>
               <span className="player-meta">
                 {isSelf ? '(You)' : ''} {status === 'playing' ? `• ${roleLabel}` : ''}
                 {eliminatedLabel}
@@ -20,8 +26,8 @@ function PlayerList({ players, selfId, status, currentPlayer }) {
           );
         })}
       </ul>
-      {status === 'playing' && currentPlayer.role && (
-        <div className="hint">You are playing as <strong>{currentPlayer.role}</strong>.</div>
+      {status === 'playing' && currentPlayer.role && !isHost && (
+        <div className="hint">Bạn đang chơi với tư cách <strong>{currentPlayer.role}</strong>.</div>
       )}
     </div>
   );
